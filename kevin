@@ -1,65 +1,64 @@
 #include <stdint.h>
 #include <stdbool.h>
-#include "inc/hw_types.h"
+#include "inc/hw_ints.h"
 #include "inc/hw_memmap.h"
-#include "inc/hw_gpio.h"
+#include "inc/hw_types.h"
 #include "driverlib/gpio.h"
+#include "driverlib/interrupt.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/timer.h"
-#include "driverlib/interrupt.h"
 #include "driverlib/pin_map.h"
-#include "inc/hw_ints.h"
+#include "driverlib/rom.h"
+#include "driverlib/rom_map.h"
 
-// Variables globales
-uint32_t g_ui32SysClock;  // Reloj del sistema
+// Variable global para la frecuencia del sistema
+uint32_t g_ui32SysClock;
+uint32_t FS = 120000000;  // 1 segundo de interrupción, cambiar luego para 2 y 5 segundos
 
-// Frecuencia del temporizador (FS) en función de la frecuencia de reloj
-uint32_t FS = 120000000 * 1;  // 1 segundo de interrupción, cambiar a 2 o 5 si se requiere
-void timer0A_handler(void);
-//*****************************************************************************
-// Función de interrupción para el temporizador 0 (Timer0A Handler)
-//*****************************************************************************
+// Función de interrupción del Timer0
 void timer0A_handler(void)
 {
-    // Limpiar la interrupción del temporizador
-    TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
 
-    // Alternar el LED conectado a PF1
-    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_1));
+    // Limpiar la interrupción del temporizador
+    MAP_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+
+    // Alternar el estado del LED conectado a PN0
+    GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_1));
+
 }
 
-//*****************************************************************************
-// Configuración del temporizador y habilitación de interrupciones
-//*****************************************************************************
 int main(void)
 {
     // Configuración del reloj del sistema a 120 MHz
-    g_ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ | SYSCTL_OSC_MAIN | SYSCTL_USE_PLL | SYSCTL_CFG_VCO_240), 120000000);
+    g_ui32SysClock = MAP_SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
+                                             SYSCTL_OSC_MAIN |
+                                             SYSCTL_USE_PLL |
+                                             SYSCTL_CFG_VCO_240), 120000000);
 
     // Habilitar el puerto GPIO para el LED
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
-    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1);  // Configurar PN1 como salida para el LED
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
+    MAP_GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_1);  // Configurar PN0 como salida para el LED
 
     // Habilitar el periférico del temporizador 0
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
 
     // Configurar el temporizador 0 como periódico
-    TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
-    TimerLoadSet(TIMER0_BASE, TIMER_A, FS -1);  // Configurar el temporizador para 1 segundo (FS)
+    MAP_TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
+    MAP_TimerLoadSet(TIMER0_BASE, TIMER_A, FS - 1);  // Cargar el valor del temporizador (1 segundo inicialmente)
 
     // Habilitar las interrupciones del procesador
-    IntMasterEnable();
+    MAP_IntMasterEnable();
 
-    // Habilitar la interrupción de Timer0
-    IntEnable(INT_TIMER0A);
-    TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);  // Habilitar la interrupción por tiempo de espera del temporizador
+    // Habilitar la interrupción de Timer0A
+    MAP_IntEnable(INT_TIMER0A);
+    MAP_TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
 
     // Habilitar el temporizador 0
-    TimerEnable(TIMER0_BASE, TIMER_A);
+    MAP_TimerEnable(TIMER0_BASE, TIMER_A);
 
-    // Bucle principal (vacío porque todo se maneja en la interrupción)
+    // Bucle principal vacío (el trabajo se hace en la interrupción)
     while(1)
     {
-        // El trabajo ocurre en la interrupción, el bucle principal está vacío
+        // El trabajo se maneja en la interrupción, no se hace nada aquí
     }
 }
