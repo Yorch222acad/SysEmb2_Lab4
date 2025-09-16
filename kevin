@@ -15,7 +15,7 @@ uint32_t g_ui32SysClock;  // Reloj del sistema
 
 // Frecuencia del temporizador (FS) en función de la frecuencia de reloj
 uint32_t FS = 120000000 * 1;  // 1 segundo de interrupción, cambiar a 2 o 5 si se requiere
-
+void timer0A_handler(void);
 //*****************************************************************************
 // Función de interrupción para el temporizador 0 (Timer0A Handler)
 //*****************************************************************************
@@ -25,7 +25,7 @@ void timer0A_handler(void)
     TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
 
     // Alternar el LED conectado a PF1
-    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
+    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTN_BASE, GPIO_PIN_1));
 }
 
 //*****************************************************************************
@@ -37,15 +37,15 @@ int main(void)
     g_ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ | SYSCTL_OSC_MAIN | SYSCTL_USE_PLL | SYSCTL_CFG_VCO_240), 120000000);
 
     // Habilitar el puerto GPIO para el LED
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1);  // Configurar PF1 como salida para el LED
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
+    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1);  // Configurar PN1 como salida para el LED
 
     // Habilitar el periférico del temporizador 0
     SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
 
     // Configurar el temporizador 0 como periódico
     TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
-    TimerLoadSet(TIMER0_BASE, TIMER_A, FS);  // Configurar el temporizador para 1 segundo (FS)
+    TimerLoadSet(TIMER0_BASE, TIMER_A, FS -1);  // Configurar el temporizador para 1 segundo (FS)
 
     // Habilitar las interrupciones del procesador
     IntMasterEnable();
