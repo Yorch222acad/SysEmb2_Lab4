@@ -46,8 +46,8 @@ int main(void)
     GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, 0x03); // Enable pin 0 and 1
     GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, 0x11); // Enable pin 0 and 1
     //--------------------------------------------------------------
-    GPIOPinTypeGPIOInput(GPIO_PORTJ_BASE, GPIO_PIN_0);
-    GPIOPadConfigSet(GPIO_PORTJ_BASE, GPIO_PIN_0, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
+    GPIOPinTypeGPIOInput(GPIO_PORTJ_BASE, 0x01);
+    GPIOPadConfigSet(GPIO_PORTJ_BASE, 0x01, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
     //--------------------------------------------------------------
     SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
 
@@ -83,7 +83,7 @@ void CntBin(int freq, int *binAnt, int l[], float *Mfreq) {
 //------------------------------------------------------------------------
 void LecBtn(int freq, float *Mfreq) {
   volatile uint32_t ui32Loop = 0;
-  if ((GPIOPinRead(GPIO_PORTJ_BASE, GPIO_PIN_0) == 0)) {
+  if ((GPIOPinRead(GPIO_PORTJ_BASE, 0x01) == 0)) {
     if (*Mfreq == 1.5){
       *Mfreq = 3.0;
     }
