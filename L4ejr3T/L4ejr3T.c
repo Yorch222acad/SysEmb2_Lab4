@@ -9,7 +9,6 @@
 #include "driverlib/timer.h"
 
 // Variable global para la frecuencia del sistema
-uint32_t g_ui32SysClock;
 uint8_t cont = 0;
 uint8_t button = 0;
 uint32_t FS = 120000000;  // 1 segundo de interrupción, cambiar luego para 2 y 5 segundos
@@ -17,28 +16,7 @@ uint32_t FS = 120000000;  // 1 segundo de interrupción, cambiar luego para 2 y 
 // Función de interrupción del Timer0
 void mitimerA0(void)
 {
-    // Limpiar la interrupción del temporizador
     TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-    if(GPIOPinRead(GPIO_PORTJ_BASE, 0x01) == 0)
-    {
-        button++;
-    }
-    else if(button == 1)
-    {
-        FS = 120000000;
-        TimerLoadSet(TIMER0_BASE, TIMER_A, FS);
-    }
-    else if(button == 2)
-    {
-        FS = 120000000*0.5;
-        TimerLoadSet(TIMER0_BASE, TIMER_A, FS);
-    }
-    else
-    {
-        button=0;
-    }
-
-
     // Encender el siguiente LED según el contador
     if (cont == 0)
     {
@@ -64,59 +42,49 @@ void mitimerA0(void)
     }
     else
     {
-        GPIOPinWrite(GPIO_PORTN_BASE, 0x02, 0x00);  // Enciende PN1
-        GPIOPinWrite(GPIO_PORTN_BASE, 0x01, 0x00);  // Enciende PN0
-        GPIOPinWrite(GPIO_PORTF_BASE, 0x10, 0x00);  // Enciende PF4
-        GPIOPinWrite(GPIO_PORTF_BASE, 0x01, 0x00);  // Enciende PF0
+        GPIOPinWrite(GPIO_PORTN_BASE, 0x03, 0x00);  // Apaga PN0 y PN1
+        GPIOPinWrite(GPIO_PORTF_BASE, 0x11, 0x00);  // Apaga PF0 y PF4
     }
-
     // Incrementar el contador y reiniciar después de PF0 (después de 3)
-   cont++;
-    if (cont >3) {
-        
-        cont = -1;  // Reiniciar la secuencia después de PF0
+    cont++;
+    if (cont>4) {
+        cont = 0;  // Reiniciar la secuencia después de PF0
     }
     
-    if(GPIOPinRead(GPIO_PORTJ_BASE, 0x01) == 0)
-    {
-        button++;
+}
+
+void LecBtn(float *Mfreq) {
+  volatile uint32_t ui32Loop = 0;
+  if ((GPIOPinRead(GPIO_PORTJ_BASE, 0x01) == 0)) {
+    if (*Mfreq == 1.0){
+      *Mfreq = 0.5;
     }
-    else if(button == 1)
-    {
-        FS = 120000000;
-        TimerLoadSet(TIMER0_BASE, TIMER_A, FS);
+    else{
+      *Mfreq = 1.0;
     }
-    else if(button == 2)
-    {
-        FS = 120000000*0.5;
-        TimerLoadSet(TIMER0_BASE, TIMER_A, FS);
-    }
-    else
-    {
-        button=0;
-    }
-    // Recargar el temporizador para la siguiente interrupción (1 segundo)
-    TimerLoadSet(TIMER0_BASE, TIMER_A, FS - 1);
+    TimerLoadSet(TIMER0_BASE, TIMER_A, (uint32_t)(FS * (*Mfreq)) - 1);
+    for (ui32Loop = 0; ui32Loop < (FS/40); ui32Loop++) {}
+  }
 }
 
 
 int main(void)
 {
+    float Mfreq = 1.0;
     // Configuración del reloj del sistema a 120 MHz
-    g_ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
-                                             SYSCTL_OSC_MAIN |
-                                             SYSCTL_USE_PLL |
-                                             SYSCTL_CFG_VCO_240), 120000000);
+    SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ | SYSCTL_OSC_MAIN | SYSCTL_USE_PLL | SYSCTL_CFG_VCO_480), FS); 
 
     // Habilitamos los puertos
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOJ);
 
-    GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, 0x03);  // Configurar PN0 y PN1 como salida para el LED
-    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, 0x11);  // Configurar PF4 y PF0 como salida para el LED
-    GPIOPinTypeGPIOInput(GPIO_PORTJ_BASE, 0x01); 
-    // Habilitar el periférico del temporizador 0
+    GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, 0x03); // Enable pin 0 and 1
+    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, 0x11); // Enable pin 0 and 1
+    //--------------------------------------------------------------
+    GPIOPinTypeGPIOInput(GPIO_PORTJ_BASE, 0x01);
+    GPIOPadConfigSet(GPIO_PORTJ_BASE, 0x01, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
+    //--------------------------------------------------------------
     SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
 
     // Configurar el temporizador 0 como periódico
@@ -136,7 +104,7 @@ int main(void)
     // Bucle principal vacío (el trabajo se hace en la interrupción)
     while(1)
     {
-        // El trabajo se maneja en la interrupción, no se hace nada aquí
+        LecBtn(&Mfreq);
     }
 }
 
